@@ -1,0 +1,35 @@
+
+
+
+. ./conf
+
+y(){
+
+echo "if y function"
+echo "USER:"
+#http_conf $1 $2
+nginx_conf $1 $2
+}
+
+x(){
+d=$(date)
+c=$1
+cat << EOF 
+  
+
+  
+EOF
+}
+
+
+y $1 $2 > xfile
+
+
+
+wc -l << LINE
+q
+w
+e
+r
+t
+LINE

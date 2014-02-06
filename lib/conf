@@ -1,0 +1,106 @@
+# -*-configuration-*-
+
+
+#DOMAIN_NAME=$1
+#KEY_NAME=$2
+#DSAdd1=
+#DSAdd2=
+#DSAdd3=
+
+
+function http_conf(){
+
+cat << EOF
+<VirtualHost *:PORT>
+        ServerName DOMAIN_NAME
+        DocumentRoot "/WRoot/KEY_NAME/"
+#	RPAFenable On
+#	RPAFsethostname On
+#	RPAFproxy_ips 192.168.30.21
+#	RPAFheader X-Forwarded-For
+        <Directory /WRoot/KEY_NAME/>
+               Options FollowSymLinks MultiViews
+               AllowOverride All
+               RewriteEngine On
+               Order allow,deny
+               allow from all
+        </Directory>
+        ErrorLog "/var/log/httpd/DOMAIN_NAME.log"
+        CustomLog "/var/log/httpd/DOMAIN_NAME.log" common
+</VirtualHost>
+EOF
+}
+
+
+
+function nginx_conf(){
+
+
+cat << EOF
+#配置Pool lvs_web_site_pool相關LB設定
+
+upstream  KEY_NAME_pool {
+  server ${DSAdd1}:80 weight=3 max_fails=2 fail_timeout=30s;
+  server ${DSAdd2}:80 weight=3 max_fails=2 fail_timeout=30s;
+  server ${DSAdd3}:80 weight=3 max_fails=2 fail_timeout=30s;
+
+}
+
+  proxy_cache_path /var/lib/nginx/tmp/proxy/cache/KEY_NAME levels=1:2
+  keys_zone=cache_KEY_NAME:200m
+  inactive=10m max_size=1000M;
+
+
+server
+{
+  listen PORT;
+  server_name DOMAIN_NAME;     #定義要代理Web主機域名:80
+
+  proxy_cache_min_uses       3;
+  proxy_buffering           on;
+  proxy_ignore_client_abort off;
+  proxy_intercept_errors    on;
+  proxy_redirect            off;
+  proxy_connect_timeout     60;
+  proxy_send_timeout        60;
+  proxy_read_timeout        60;
+  proxy_headers_hash_max_size 51200;
+  proxy_headers_hash_bucket_size 6400;
+
+
+  location /
+  {
+    #後端伺服器收到502,504錯誤訊息轉發pool中其他live機器(Fail OVER)
+    proxy_next_upstream http_502 http_504 error timeout invalid_header;
+    proxy_pass http://KEY_NAME_pool;
+    proxy_set_header Host DOMAIN_NAME;
+    proxy_set_header X-Forwarded-For $remote_addr;
+  }
+  access_log /var/log/nginx/DOMAIN_NAME.log;   #log紀錄檔
+
+
+  location ~ /purge(/.*)    #定義手動清除快取成員127.0.0.1,192.168.11.0/24 兩網段allow Purge
+
+                        #proxy_cache_purge : 配置web 快取key值
+  {
+    allow 127.0.0.1;
+    allow 192.168.30.0/24;
+    deny all;
+    proxy_cache_purge cache_KEY_NAME $host$1$is_args$args;
+  }
+
+  location ~* \.(html|htm|jpg|png|gif|jpeg|css|js|mp3|wav|swf|mov|doc|pdf|xls|ppt|docx|pptx|xlsx)$
+  {
+        proxy_buffering on;
+        proxy_cache cache_KEY_NAME;
+        proxy_cache_valid 200 304 12h;
+        proxy_cache_valid 301 302 1m;
+        proxy_cache_valid any 1m;
+        proxy_cache_key $host$uri$is_args$args;
+        proxy_set_header Host $Host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://KEY_NAME_pool;
+  }
+}
+EOF
+}
