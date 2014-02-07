@@ -13,19 +13,31 @@ fi
 #tag=$(awk '/http/ {n++}; END {print n+0}' $fini)
 
 function read_conf(){
-  echo "Select your ini files:\n$(ls | grep '.ini')\n"
-  read -p "..." f
+f=''
+
+  echo "===================="
+  echo -e "Select your ini files:\n$(ls sample/ | grep '.ini')\n"
+  echo "===================="
+  read f
   tmpf=$(mktemp)
   
+  if [ "$f" != "" ];then
+        
+    if [ "$1" == "H" ];then
+      http_conf > $tmpf
+      read_ini $f $tmpf
+    fi
 
-  if [ "$1" == "H" ];then
-    http_conf > $tmpf
-    read_ini $f $tmpf
-  fi
-
-  if [ "$1" == "N" ]; then
-    nginx_conf > $tmpf
-    read_ini $f $tmpf
+    if [ "$1" == "N" ];then
+      nginx_conf > $tmpf
+      read_ini $f $tmpf
+    fi
+  else
+    rm $tmpf
+    echo "===================="
+    echo -e "操作錯誤返回主選單:"
+    main
+    echo "===================="
   fi
   
   rm $tmpf
@@ -42,6 +54,13 @@ function read_ini(){
 
 fini=$1
 fconf=$2
+if [ ! -f $fini ];then
+  rm $fconf
+  echo "===================="
+  echo "無效操作返回主選單"
+  sleep 1
+  main 
+fi
 
     for line in $(cat $fini)
     do
@@ -64,19 +83,22 @@ fconf=$2
 
 
 function main(){
-    
-  read -p "H | N | quit" x
+  
+  echo -e "|http mod :\t1"
+  echo -e "|nginx mod :\t2"
+  echo -e "|quit :\t\t3 "
+  read -p "選擇你要的模式:" x
 
   case "$x" in
-    'H')
+    1)
       read_conf 'H'
     ;;
 
-    'N')
+    2)
       read_conf 'N'
     ;;
 
-    'quit'|'q')
+    3)
       exit
     ;;
     *)
