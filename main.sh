@@ -25,12 +25,12 @@ f=''
         
     if [ "$1" == "H" ];then
       http_conf > $tmpf
-      read_ini $f $tmpf
+      read_ini sample/${f} $tmpf
     fi
 
     if [ "$1" == "N" ];then
       nginx_conf > $tmpf
-      read_ini $f $tmpf
+      read_ini sample/${f} $tmpf
     fi
   else
     rm $tmpf
@@ -70,8 +70,8 @@ fi
         dconf=${f/]}.conf
         cp $fconf $dconf
       else
-        key=${line/#*=/}
-        value=${line/%=*/}
+        key=${line/#*=/}   #由前方比對,delete相符合,顯示等於後面的值
+        value=${line/%=*/} #由後面比對,delete相符合,顯示等於前面的值
         
         Csed $value $key $dconf
     
